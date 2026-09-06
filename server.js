@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
-const cors = require('cors'); 
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
@@ -58,6 +58,19 @@ app.post('/login', async (req, res) => {
 
   res.json({ message: 'Login successful' });
 });
+
+// Automatically seed an admin account on startup if none exists
+const createDefaultAdmin = async () => {
+  const db = readDB();
+  const adminExists = db.users.find(u => u.username === 'admin');
+  if (!adminExists) {
+    const hashedPassword = await bcrypt.hash('your_secure_password', 10);
+    db.users.push({ username: 'admin', password: hashedPassword });
+    writeDB(db);
+    console.log('Default admin user created successfully.');
+  }
+};
+createDefaultAdmin();
 
 // Use Render's dynamic port or default to 3000 locally
 const PORT = process.env.PORT || 3000;
