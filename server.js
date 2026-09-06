@@ -25,44 +25,35 @@ const writeDB = (data) => {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 };
 
-// Seed initial users with 29 days access if database is empty
-const seedDefaultUser = async () => {
+// Automatically seed default users on startup with custom durations
+const seedDefaultUsers = async () => {
   const db = readDB();
-  const twentyNineDaysMs = 29 * 24 * 60 * 60 * 1000;
+  let modified = false;
 
-  // Seed default admin if missing
-  if (!db['admin']) {
-    const hashedPassword = await bcrypt.hash('ilobyou', 10);
-    db['admin'] = {
-      password: hashedPassword,
-      expiresAt: Date.now() + twentyNineDaysMs,
-      activeSession: ''
-    };
+  const defaultUsers = {
+    'admin': { password: 'ilobyou', days: 300 },
+    'rajj': { password: 'rajj', days: 28 },
+    'john': { password: 'john7698', days: 28 }
+  };
+
+  for (const [username, config] of Object.entries(defaultUsers)) {
+    if (!db[username]) {
+      const hashedPassword = await bcrypt.hash(config.password, 10);
+      db[username] = {
+        password: hashedPassword,
+        expiresAt: Date.now() + (config.days * 24 * 60 * 60 * 1000),
+        activeSession: ''
+      };
+      modified = true;
+    }
   }
 
-  // Seed user 'rajj' if missing
-  if (!db['rajj']) {
-    const hashedPassword = await bcrypt.hash('rajj', 10);
-    db['rajj'] = {
-      password: hashedPassword,
-      expiresAt: Date.now() + twentyNineDaysMs,
-      activeSession: ''
-    };
+  if (modified) {
+    writeDB(db);
+    console.log('Default users seeded with custom durations successfully.');
   }
-
-  // Seed user 'john' if missing
-  if (!db['john']) {
-    const hashedPassword = await bcrypt.hash('john7698', 10);
-    db['john'] = {
-      password: hashedPassword,
-      expiresAt: Date.now() + twentyNineDaysMs,
-      activeSession: ''
-    };
-  }
-
-  writeDB(db);
 };
-seedDefaultUser();
+seedDefaultUsers();
 
 // Get all users (Admin view)
 app.get('/users', (req, res) => {
@@ -70,7 +61,7 @@ app.get('/users', (req, res) => {
   res.json(db);
 });
 
-// Create / Register a new user (Admin panel action)
+// Create / Register a new user
 app.post('/register', async (req, res) => {
   const { username, password, duration, unit } = req.body;
   if (!username || !password) {
@@ -119,7 +110,6 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Invalid username or password' });
   }
 
-  // Check if password matches (supports both hashed and raw text strings)
   let isValidPassword = false;
   if (user.password.startsWith('$2b$')) {
     isValidPassword = await bcrypt.compare(password, user.password);
