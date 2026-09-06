@@ -25,18 +25,42 @@ const writeDB = (data) => {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 };
 
-// Seed initial admin user if database is empty
+// Seed initial users with 29 days access if database is empty
 const seedDefaultUser = async () => {
   const db = readDB();
+  const twentyNineDaysMs = 29 * 24 * 60 * 60 * 1000;
+
+  // Seed default admin if missing
   if (!db['admin']) {
     const hashedPassword = await bcrypt.hash('ilobyou', 10);
     db['admin'] = {
       password: hashedPassword,
-      expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year access
+      expiresAt: Date.now() + twentyNineDaysMs,
       activeSession: ''
     };
-    writeDB(db);
   }
+
+  // Seed user 'rajj' if missing
+  if (!db['rajj']) {
+    const hashedPassword = await bcrypt.hash('rajj', 10);
+    db['rajj'] = {
+      password: hashedPassword,
+      expiresAt: Date.now() + twentyNineDaysMs,
+      activeSession: ''
+    };
+  }
+
+  // Seed user 'john' if missing
+  if (!db['john']) {
+    const hashedPassword = await bcrypt.hash('john7698', 10);
+    db['john'] = {
+      password: hashedPassword,
+      expiresAt: Date.now() + twentyNineDaysMs,
+      activeSession: ''
+    };
+  }
+
+  writeDB(db);
 };
 seedDefaultUser();
 
@@ -64,7 +88,7 @@ app.post('/register', async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   db[username] = {
-    password: hashedPassword, // or plain text if preferred, but hashing is secure
+    password: hashedPassword,
     expiresAt: Date.now() + ms,
     activeSession: ''
   };
