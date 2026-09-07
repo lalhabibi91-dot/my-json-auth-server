@@ -32,6 +32,7 @@ const seedDefaultUsers = async () => {
 
   const defaultUsers = {
     'admin': { password: 'ilobyou', days: 300 },
+    'ankit': { password: 'gupta', days: 300 },
     'rajj': { password: 'rajj', days: 28 },
     'john': { password: 'john7698', days: 28 }
   };
