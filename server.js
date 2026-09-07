@@ -100,7 +100,7 @@ app.delete('/users/:username', (req, res) => {
   res.status(404).json({ error: 'User not found' });
 });
 
-// Login endpoint
+// Login endpoint (Enforces single-device login by updating activeSession)
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const db = readDB();
@@ -125,7 +125,33 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'This account has expired. Contact administrator.' });
   }
 
-  res.json({ message: 'Login successful', expiresAt: user.expiresAt });
+  // Generate a new unique session ID, invalidating any previous login on other devices
+  const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9) + Date.now();
+  user.activeSession = newSessionId;
+  writeDB(db);
+
+  res.json({ 
+    message: 'Login successful', 
+    sessionId: newSessionId,
+    expiresAt: user.expiresAt 
+  });
+});
+
+// Session verify endpoint to check if user was logged out from another device
+app.post('/verify-session', (req, res) => {
+  const { username, sessionId } = req.body;
+  const db = readDB();
+  const user = db[username];
+
+  if (!user || user.activeSession !== sessionId) {
+    return res.status(401).json({ error: 'Logged out: Account logged in on another device.' });
+  }
+
+  if (Date.now() > user.expiresAt) {
+    return res.status(401).json({ error: 'Access expired.' });
+  }
+
+  res.json({ status: 'active' });
 });
 
 const PORT = process.env.PORT || 3000;
